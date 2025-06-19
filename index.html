@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aviator Mini App</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #0e0e23, #1a1a2e);
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 20px 0 10px;
+      font-size: 2em;
+    }
+    #plane {
+      width: 80px;
+      transition: transform 0.3s ease-in-out;
+      margin: 20px 0;
+    }
+    #multiplier {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: #00ff99;
+    }
+    #timer {
+      font-size: 1.8em;
+      margin-top: 5px;
+      color: #ffcc00;
+    }
+    #balance {
+      font-weight: bold;
+      color: #66ccff;
+    }
+    .control-panel {
+      margin-top: 20px;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 120px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 8px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background-color: #0077ff;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #005fcc;
+    }
+  </style>
+</head>
+<body>
+  <h1>✈️ Aviator</h1>
+  <img id="plane" src="https://www.freeiconspng.com/uploads/airplane-png-16.png" alt="Plane" />
+  <div id="multiplier">x1.00</div>
+  <div id="timer">10</div>
+  <div>Баланс: <span id="balance">--</span> TON</div>
+  <div class="control-panel">
+    <input type="number" id="amount" placeholder="Ставка" min="0.1" step="0.1" />
+    <br />
+    <button onclick="placeBet()">Ставка</button>
+    <button onclick="cashOut()">Кэшаут</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const telegramId = tg.initDataUnsafe.user.id;
+
+    const balanceEl = document.getElementById("balance");
+    const multiplierEl = document.getElementById("multiplier");
+    const timerEl = document.getElementById("timer");
+    const plane = document.getElementById("plane");
+
+    let socket = new WebSocket("wss://kuttybol.onrender.com/ws?user_id=" + telegramId);
+
+    socket.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+      multiplierEl.textContent = `x${data.multiplier.toFixed(2)}`;
+      timerEl.textContent = data.timer;
+      balanceEl.textContent = data.balance.toFixed(2);
+      plane.style.transform = `translateX(${data.multiplier * 20}px)`;
+    };
+
+    async function placeBet() {
+      const amount = parseFloat(document.getElementById("amount").value);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Ставканы дұрыс енгізіңіз");
+        return;
+      }
+      const res = await fetch("https://kuttybol.onrender.com/bet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegram_id: telegramId, amount })
+      });
+      const data = await res.json();
+      alert(data.detail);
+    }
+
+    async function cashOut() {
+      const res = await fetch("https://kuttybol.onrender.com/cashout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegram_id: telegramId })
+      });
+      const data = await res.json();
+      alert(data.detail);
+    }
+
+    async function loadBalance() {
+      const res = await fetch("https://kuttybol.onrender.com/balance/" + telegramId);
+      const data = await res.json();
+      balanceEl.textContent = data.balance.toFixed(2);
+    }
+
+    loadBalance();
+  </script>
+</body>
+</html>
